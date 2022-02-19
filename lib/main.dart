@@ -54,9 +54,9 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   int _counter = 0;
-
-  void _fetchData() {
-    getNobelPrize();
+  List<Prizes> prizeList = [];
+  bool filtered = false;
+  void _fetchData({String category = ""}) {
     setState(() {
       // This call to setState tells the Flutter framework that something has
       // changed in this State, which causes it to rerun the build method below
@@ -66,19 +66,33 @@ class _MyHomePageState extends State<MyHomePage> {
       _counter++;
     });
   }
-
-  List<Prizes> prizeList = [];
-
+  void filterNobelPrize(String filter){
+    if(filtered){
+      setState(() {
+        filtered = false;
+      });
+      return;
+    }
+    filtered = true;
+    List<Prizes> newPrizeList = [];
+    for(int i = 0; i < prizeList.length; i++){
+      if(prizeList[i].category == filter){
+        newPrizeList.add(prizeList[i]);
+      }
+    }
+    setState(() {
+      prizeList = newPrizeList;
+    });
+  }
   Future<List<Prizes>> getNobelPrize() async {
     var response = await http.get('http://api.nobelprize.org/v1/prize.json');
     late NobelPrize nobelPrize;
-    if (response.statusCode == 200) {
+    if (response.statusCode == 200 && !filtered) {
       nobelPrize = NobelPrize.fromJson(jsonDecode(response.body));
-      print(nobelPrize.toJson());
+      return prizeList = nobelPrize.prizes;
     }
-    return prizeList = nobelPrize.prizes;
+    return prizeList;
   }
-
   @override
   Widget build(BuildContext context) {
     // This method is rerun every time setState is called, for instance as done
@@ -91,30 +105,87 @@ class _MyHomePageState extends State<MyHomePage> {
       appBar: AppBar(
         // Here we take the value from the MyHomePage object that was created by
         // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
+        title: Text("Nobel Prize Winners"),
+        backgroundColor: Colors.black,
+        centerTitle: true,
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: FutureBuilder(
+      backgroundColor: Colors.black,
+      body: SingleChildScrollView(
+
+        child: Column(
+          children: [
+            FutureBuilder(
                 future: getNobelPrize(),
                 builder: (context, snapshot) {
                   if (!snapshot.hasData) {
-                    return Text('Loading...');
+                    return Text("Loading...");
                   } else {
                     return ListView.builder(
+                        physics: const ClampingScrollPhysics(),
+                        shrinkWrap: true,
                         itemCount: prizeList.length,
+                        addAutomaticKeepAlives: true,
                         itemBuilder: (context, index) {
                           return Card(
+                            elevation: 4.0,
                             child: Padding(
-                              padding: const EdgeInsets.all(8.0),
+                              padding: const EdgeInsets.all(10.0),
                               child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceAround,
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
-                                  Text(prizeList[index].year.toString()),
-                                  Text(prizeList[index].category.toString()),
-                                  Text(prizeList[index].laureates.toString())
+                                  Text("Year : " + prizeList[index].year.toString(), textScaleFactor: 1.5,),
+                                  Text("Category : " +
+                                      prizeList[index].category.toString(), textScaleFactor: 1.2,),
+                                  ListView.builder(
+                                      physics: const ClampingScrollPhysics(),
+                                      shrinkWrap: true,
+                                      itemCount: prizeList[index].laureates.length,
+                                      itemBuilder: (context, idx) {
+                                        List<Laureates> l =
+                                            prizeList[index].laureates;
+                                        return Card(
+                                          elevation: 1.0,
+                                          color: Colors.white70,
+                                          child: Padding(
+                                            padding: const EdgeInsets.all(10.0),
+                                            child: Column(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.spaceAround,
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.stretch,
+                                              children: [
+                                                Text("Id : " +
+                                                    prizeList[index]
+                                                        .laureates[idx]
+                                                        .id
+                                                        .toString(), style: TextStyle(color: Colors.black),),
+                                                Text("Firstname : " +
+                                                    prizeList[index]
+                                                        .laureates[idx]
+                                                        .firstname
+                                                        .toString(), style: TextStyle(color: Colors.black),),
+                                                Text("Surname : " +
+                                                    prizeList[index]
+                                                        .laureates[idx]
+                                                        .surname
+                                                        .toString(), style: TextStyle(color: Colors.black),),
+                                                Text("Motivation : " +
+                                                    prizeList[index]
+                                                        .laureates[idx]
+                                                        .motivation
+                                                        .toString(), style: TextStyle(color: Colors.black),),
+                                                Text("Share : " +
+                                                    prizeList[index]
+                                                        .laureates[idx]
+                                                        .share
+                                                        .toString(), style: TextStyle(color: Colors.black),)
+                                              ],
+                                            ),
+                                          ),
+                                        );
+                                      })
                                 ],
                               ),
                             ),
@@ -122,15 +193,15 @@ class _MyHomePageState extends State<MyHomePage> {
                         });
                   }
                 }),
-          ),
-        ],
+          ],
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          _fetchData();
+          filterNobelPrize("chemistry");
         },
         tooltip: 'Increment',
-        child: const Icon(Icons.add),
+        child: const Icon(Icons.photo_filter_sharp),
       ), // This trailing comma makes auto-formatting nicer for build methods.
     );
   }
